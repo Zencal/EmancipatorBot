@@ -54,22 +54,28 @@ function handler(event, globalObject) {
             return;
         }
 
-        dao.getIncomingVotesForUser(requestedUser.userID).then(function(incomingVotesObj) {
-            dao.getVotesCastByUser(requestedUser.userID).then(function(votesCastObj) {
-                dao.getPlaysByUser(requestedUser.userID).then(function(plays) {
-                    var incomingWootPercentage = _calculateWootPercentage(incomingVotesObj);
-                    var outgoingWootPercentage = _calculateWootPercentage(votesCastObj);
-                    var userUrl = statsUrl.replace("{{userId}}", requestedUser.userID);
+        var promises = [
+            dao.getIncomingVotesForUser(requestedUser.userID),
+            dao.getVotesCastByUser(requestedUser.userID),
+            dao.getNumberOfPlaysByUser(requestedUser.userID)
+        ];
 
-                    bot.sendChat("{} has played {} songs to EmancipatorBot, receiving {} woots and {} mehs ({}% woot rate).",
-                                  requestedUser.username, plays.length, incomingVotesObj.woots, incomingVotesObj.mehs, incomingWootPercentage);
+        Promise.all(promises).then(function(values) {
+            var incomingVotesObj = values[0];
+            var votesCastObj = values[1];
+            var numberOfPlays = values[2];
 
-                    bot.sendChat("{} has cast {} woots and {} mehs ({}% woot rate).",
-                                  requestedUser.username, votesCastObj.woots, votesCastObj.mehs, outgoingWootPercentage);
+            var incomingWootPercentage = _calculateWootPercentage(incomingVotesObj);
+            var outgoingWootPercentage = _calculateWootPercentage(votesCastObj);
+            var userUrl = statsUrl.replace("{{userId}}", requestedUser.userID);
 
-                    bot.sendChat("View more at {}", userUrl);
-                });
-            });
+            bot.sendChat("{} has played {} songs to EmancipatorBot, receiving {} woots and {} mehs ({}% woot rate).",
+                          requestedUser.username, numberOfPlays, incomingVotesObj.woots, incomingVotesObj.mehs, incomingWootPercentage);
+
+            bot.sendChat("{} has cast {} woots and {} mehs ({}% woot rate).",
+                          requestedUser.username, votesCastObj.woots, votesCastObj.mehs, outgoingWootPercentage);
+
+            bot.sendChat("View more at {}", userUrl);
         });
     });
 }
